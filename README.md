@@ -46,4 +46,4 @@ Synchronous TRAcks and Organization) and its implementation will be carried out 
 
 Para más información contactar con:
 * **Alumno:** Álvaro López García ([alvaro.lopezgar@alumnos.unican.es](mailto:alvaro.lopezgar@alumnos.unican.es)).
-* **Director:** Cristina Tîrnăucă ([jairo.gonzalezg@alumnos.unican.es](mailto:jairo.gonzalezg@alumnos.unican.es)).
+* **Director:** Cristina Tîrnăucă ([cristina.tirnauca@unican.es](mailto:cristina.tirnauca@unican.es)).
