@@ -42,6 +42,21 @@ article reference for this work is [Oord2016](https://arxiv.org/abs/1609.03499))
 carried out on the [MAESTRO dataset](https://magenta.tensorflow.org/datasets/maestro) (MIDI and Audio Edited for 
 Synchronous TRAcks and Organization) and its implementation will be carried out in Python, using the TensorFlow library.
 
+## Cómo usarlo
+
+- El directorio `utils` contiene código auxiliar para la gestión de los ficheros `*.midi` y `*.wav` del dataset.
+
+- El directorio `resources` contiene recursos cosméticos del notebook.
+
+- En el jupyter notebook `TFG.ipynb` se proporcionan explicaciones del desarrollo del modelo así como el código para su
+entrenamiento y la realización de predicciones.
+
+- El script `train.sh` es un script pensado para el entrenamiento del modelo por medio de una cli. Dicho script realiza 
+los siguientes pasos:
+  - Genera un fichero `TFG.py` que recava el código del notebook.
+  - Descarga el MAESTRO dataset y lo descomprime.
+  - Y por último, ejecuta el fichero python que ha generado para entrenar el modelo.
+
 ## Contacto
 
 Para más información contactar con:
