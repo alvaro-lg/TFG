@@ -1,4 +1,4 @@
-# Trabajo de Fin de Grado: _Interpretación de música de piano usando técnicas de Deep Learning"_.
+# Trabajo de Fin de Grado: _"Interpretación de música de piano usando técnicas de Deep Learning"_.
 
 Repositorio creado para el desarrollo del código del Trabajo de Fin de Grado para acceder al Grado en Ingeniería 
 Informática (Facultad de Ciencias - Universidad de Cantabria).
