@@ -10,9 +10,6 @@
 # In[2]:
 
 
-# Actualizando el fichero .py para la ejecución del entrenamiento en el IFCA
-get_ipython().system('jupyter nbconvert --to python TFG.ipynb ')
-
 # Celda para importar librerías, costantes, etc.
 import tensorflow as tf
 import pandas as pd
@@ -31,7 +28,8 @@ from tqdm import tqdm
 from IPython.display import display, HTML
 display(HTML("<style>.container { width:70% !important; }</style>"))
 
-PATH = '/Volumes/TheVault/Documentos Mac/Documentos Universidad/4o Curso/2o Cuatrimestre/Trabajo de Fin de Grado/maestro-v3.0.0/'
+#PATH = '/Volumes/TheVault/Documentos Mac/Documentos Universidad/4o Curso/2o Cuatrimestre/Trabajo de Fin de Grado/maestro-v3.0.0/'
+PATH = './maestro-v3.0.0/'
 
 
 # ### Creación del dataframe
