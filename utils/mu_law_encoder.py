@@ -13,7 +13,7 @@ class Mu_law_encoder:
         amp = np.sign(sample) * (np.log(1 + self.mu * np.abs(sample / self.max_amp))) / np.log(self.mu + 1)
 
         # Quantization
-        return np.rint((self.n_levels * (amp-self.min_amp)) / (self.max_amp - self.min_amp))
+        return int(np.rint((self.n_levels * (amp-self.min_amp)) / (self.max_amp - self.min_amp)))
 
     def decode_sample(self, idx):
 
