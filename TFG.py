@@ -7,7 +7,7 @@
 # **Autor:** Álvaro López García. <br>
 # **Tutor:** Cristina Tirnauca.
 
-# In[ ]:
+# In[40]:
 
 
 '''# Colab-only
@@ -17,7 +17,7 @@ drive.mount('/content/drive')
 %cd drive/MyDrive/Colab\ Notebooks/TFG/'''
 
 
-# In[1]:
+# In[41]:
 
 
 # Celda para importar librerías, costantes, etc.
@@ -45,7 +45,7 @@ PATH = '/Volumes/TheVault/Documentos Mac/Documentos Universidad/4o Curso/2o Cuat
 
 # ### Creación del dataframe
 
-# In[2]:
+# In[42]:
 
 
 def get_dataframe(path=PATH + 'maestro-v3.0.0.csv'):
@@ -55,18 +55,18 @@ def set_dataframe(df, path=PATH + 'maestro-v3.0.0.csv'):
     df.to_csv(path, index=False)
 
 
-# In[3]:
+# In[44]:
 
 
-df = get_dataframe()
-df.head(10)
+df = get_dataframe('maestro-v3.0.0.csv')
+df.head(20)
 
 
 # ## Clases, métodos y constantes para el procesado del Dataset
 
 # ### Parámetros del procesado
 
-# In[4]:
+# In[6]:
 
 
 #Parámetros de configuración de los archivos de audio
@@ -76,21 +76,21 @@ N_NOTES = 88
 
 # ###  Código para el procesado de los datos relativos a los ficheros MIDI (`*.midi -> tf.Dataset`)
 
-# In[5]:
+# In[7]:
 
 
 # Constantes relativas al estádar MIDI
 DEFAULT_SR = 500000
 
 
-# In[6]:
+# In[8]:
 
 
 from utils.midi_handler import Midi_handler
 midi_hdlr = Midi_handler(sampling_rate=SAMPLING_RATE, dir_path=PATH, n_notes=N_NOTES)
 
 
-# In[ ]:
+# In[9]:
 
 
 '''# Ploteamos una sección de un pianoroll de ejemplo
@@ -99,7 +99,7 @@ midi_hdlr.plot_pianoroll(midi_hdlr.vectorize_midi(df['midi_filename'][0])[0:6400
 
 # Para los datos relativos a los ficheros `.midi` aplicaremos la normalización **MinMax** donde cada nuevo valor $x'$ para cada ejemplo $x$ vendrá dado por: $$ x' = \frac{x - min}{max - min} ,$$ donde $max$ y $min$ son los valores máximos y mínimos de los valores de entrada. En este caso, dada la definición del estándar MIDI, sabemos que los valores de estas velocidades ya están parametrizados entre $0$ y $127$ por lo que no necesitamos iterar sobre los datos para conocer el máximo y el mínimo. Para ello definiremos las siguientes constantes:
 
-# In[7]:
+# In[10]:
 
 
 # Constates para aplicar la normalización a los ficheros MIDI
@@ -109,14 +109,14 @@ MIDI_MIN = 0
 
 # ### Código para el procesado de los datos relativos a los ficheros de audio (`*.wav -> tf.Dataset`)
 
-# In[8]:
+# In[11]:
 
 
 from utils.wav_handler import Wav_handler
 wav_hdlr = Wav_handler(sampling_rate=SAMPLING_RATE, dir_path=PATH)
 
 
-# In[ ]:
+# In[12]:
 
 
 '''# Ploteamos una sección de una onda
@@ -125,7 +125,7 @@ wav_hdlr.plot_wav(wav_hdlr.vectorize_wav(df['audio_filename'][0])[0:128000], tit
 
 # Para la compresión de la señal emplearemos una compresión basada en una $\mu$-law.
 
-# In[9]:
+# In[13]:
 
 
 # Constates relativas a la compresión con la mu-law
@@ -135,7 +135,7 @@ MU = 256
 AMPS = (-1, 1)
 
 
-# In[10]:
+# In[14]:
 
 
 from utils.mu_law_encoder import Mu_law_encoder
@@ -145,14 +145,14 @@ mulaw_enc = Mu_law_encoder(mu=MU, n_bits=N_BITS, amps=AMPS)
 # ## Creación del modelo
 # ![WaveNet_residblock.png](attachment:WaveNet_residblock.png)
 
-# In[11]:
+# In[15]:
 
 
 def calculate_receptive_field(n_blocks, n_layers):
     return sum([2 ** i for i in range(n_layers)] * n_blocks) - n_blocks + 1
 
 
-# In[12]:
+# In[16]:
 
 
 # Parámetros que definen la arquitectura del modelo a crear por defecto en las llamadas a get_wavenet()
@@ -181,7 +181,7 @@ OUT_SHAPE = INP_SHAPE
 LC_SHAPE = (LC_LEN, N_LC_CHANNELS)
 
 
-# In[13]:
+# In[17]:
 
 
 '''
@@ -263,7 +263,7 @@ N_EPOCHS = 5
 BATCH_SIZE = 10
 
 
-# In[15]:
+# In[19]:
 
 
 feature_description = {
@@ -325,7 +325,7 @@ def read_data(filename=None):
 
 # #### Empleamos multithreading para cachear los datos en ficheros
 
-# In[16]:
+# In[20]:
 
 
 MULTITHREAD = True
@@ -362,7 +362,7 @@ if MULTITHREAD:
                 dfLock.acquire()
                 print(f"{threadName} actualiza dataframe\n")
                 df.loc[idx, 'data_cached'] = True
-                set_dataframe(df)
+                set_dataframe(df, 'maestro-v3.0.0.csv')
                 dfLock.release()
             else:
                 queueLock.release()
@@ -424,12 +424,12 @@ if not MULTITHREAD:
             cache_file = 'cache/' + split + '/' + midi[:-5] + '.tfrecord'
             write_data(df.iloc[idx], file=cache_file)
             df['data_cached'][idx] = True
-            break
+            set_dataframe(df, 'maestro-v3.0.0.csv')
 
 
 # ### Preparamos el entrenamiento
 
-# In[36]:
+# In[21]:
 
 
 training_progress_df = get_dataframe('traning_progress.csv')
@@ -439,10 +439,8 @@ training_progress_df.head()
 
 # ### Loop de entrenamiento
 
-# In[47]:
+# In[36]:
 
-
-from sklearn.model_selection import cross_val_score
 
 try:
     model = tf.keras.models.load_model('model.hdf5')
@@ -468,31 +466,26 @@ while current_epoch < N_EPOCHS:
     crossval_scores = []
     
     # Para cada fichero medimos la cross validation score al final del epoch
-    for idx, (split, midi) in enumerate(zip(train_df['split'], train_df['midi_filename'])):
+    for idx, (split, midi) in enumerate(zip(crossval_df['split'], crossval_df['midi_filename'])):
         
         print('Calculando pérdida para el conjunto de cross validation...')
         
         crossval_dataset = read_data(f'cache/{split}/{midi[:-5]}')
         crossval_dataset = crossval_dataset.cache()
         crossval_dataset = crossval_dataset.map(parse_sample)
-        targets_dataset = crossval_dataset.map((lambda i: tf.one_hot(i["out"], depth=N_LEVELS)),
+        crossval_dataset = crossval_dataset.map((lambda i: ({"lc": tf.expand_dims(i["lc"], 0), 
+                                              "seq":  tf.one_hot(i["seq"], depth=N_LEVELS)}, 
+                                             tf.one_hot(i["out"], depth=N_LEVELS))),
                                   num_parallel_calls = tf.data.experimental.AUTOTUNE)
-        crossval_dataset = crossval_dataset.map((lambda i: {"lc":  tf.expand_dims(tf.expand_dims(i["lc"], 0), 0), 
-                                              "seq":  tf.expand_dims(tf.one_hot(i["seq"], depth=N_LEVELS), 0)}),
-                                  num_parallel_calls = tf.data.experimental.AUTOTUNE)
+        crossval_dataset = crossval_dataset.batch(BATCH_SIZE)
         crossval_dataset = crossval_dataset.prefetch(tf.data.AUTOTUNE)
-        
-        # Calculamos la longitud
-        length = int(sum(1 for _ in train_dataset))
-        
-        predictions = np.squeeze(model.predict(crossval_dataset, steps=length))
-        
-        crossval_scores.append(np.mean(tf.keras.losses.CategoricalCrossentropy(predictions, targets_dataset)))
-        
-        break
+
+        # Calculamos la pedida
+        statistics = model.evaluate(crossval_dataset)
+        crosval_scores.append(statistics)
         
     with open("crossval_accuracy.csv", "a") as file:
-        file.write(f"{np.mean(crossval_scores)}\n")
+        file.write(f"{np.mean([i['accuracy'] for i in crossval_scores])}\n")
 
     # Obtenemos los ficheros a entrenar en este epoch
     train_df = training_progress_df[(training_progress_df['epochs_trained'] <= current_epoch) & 
@@ -502,7 +495,7 @@ while current_epoch < N_EPOCHS:
     print(f'Comenzando epoch nº {current_epoch}...')
     
     # Para cada fichero entrenamos
-    for idx, (split, midi) in enumerate(zip(train_df['split'], train_df['midi_filename'])):
+    for idx, (split, midi) in enumerate(zip(training_progress_df['split'], training_progress_df['midi_filename'])):
         
         print(f'Entrenando el fichero {midi[:-5]}...')
         
@@ -551,8 +544,7 @@ while current_epoch < N_EPOCHS:
 # In[ ]:
 
 
-predictions = np.squeeze(model.predict(crossval_dataset, steps=length))
-np.mean(tf.keras.losses.CategoricalCrossentropy(predictions, targets_dataset))
+
 
 
 # ### Estadísticas del entrenamiento
