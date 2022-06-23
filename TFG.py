@@ -302,8 +302,6 @@ def generate_data(df):
                 "out": wav_feature(wav_data[idx+1:idx+INPUT_LEN+1], mulaw_enc)}
 
         yield tf.train.Example(features=tf.train.Features(feature=feature)).SerializeToString()
-    
-    gc.collect()
 
 def write_data(df, max_files=None, max_samples=None, file='out.tfrecord'):
 
@@ -376,7 +374,7 @@ if MULTITHREAD:
 
 if MULTITHREAD:
 
-    N_THREADS = 12
+    N_THREADS = 4
 
     exitFlag = 0
     queueLock = threading.Lock()
@@ -431,7 +429,7 @@ if not MULTITHREAD:
 
 # ### Preparamos el entrenamiento
 
-# In[17]:
+# In[36]:
 
 
 training_progress_df = get_dataframe('traning_progress.csv')
@@ -441,14 +439,17 @@ training_progress_df.head()
 
 # ### Loop de entrenamiento
 
-# In[22]:
+# In[47]:
 
+
+from sklearn.model_selection import cross_val_score
 
 try:
     model = tf.keras.models.load_model('model.hdf5')
     print("Cargado modelo anterior")
 except:
     model = get_wavenet()
+    model.compile(tf.keras.optimizers.Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
     print("Creando nuevo modelo")
 
 # Obtenemos el epoch actual
@@ -458,6 +459,40 @@ print(f'Comenzando el entrenamiento del modelo (nº de epochs: {N_EPOCHS}, pará
 print('------------------------------------------------------------------------')
 
 while current_epoch < N_EPOCHS:
+    
+    # Obtenemos los valores de cross validation
+    crossval_df = training_progress_df[(training_progress_df['epochs_trained'] <= current_epoch) & 
+                                    (training_progress_df['split'] == 'validation') &
+                                    (training_progress_df['data_cached'] == True)]
+    
+    crossval_scores = []
+    
+    # Para cada fichero medimos la cross validation score al final del epoch
+    for idx, (split, midi) in enumerate(zip(train_df['split'], train_df['midi_filename'])):
+        
+        print('Calculando pérdida para el conjunto de cross validation...')
+        
+        crossval_dataset = read_data(f'cache/{split}/{midi[:-5]}')
+        crossval_dataset = crossval_dataset.cache()
+        crossval_dataset = crossval_dataset.map(parse_sample)
+        targets_dataset = crossval_dataset.map((lambda i: tf.one_hot(i["out"], depth=N_LEVELS)),
+                                  num_parallel_calls = tf.data.experimental.AUTOTUNE)
+        crossval_dataset = crossval_dataset.map((lambda i: {"lc":  tf.expand_dims(tf.expand_dims(i["lc"], 0), 0), 
+                                              "seq":  tf.expand_dims(tf.one_hot(i["seq"], depth=N_LEVELS), 0)}),
+                                  num_parallel_calls = tf.data.experimental.AUTOTUNE)
+        crossval_dataset = crossval_dataset.prefetch(tf.data.AUTOTUNE)
+        
+        # Calculamos la longitud
+        length = int(sum(1 for _ in train_dataset))
+        
+        predictions = np.squeeze(model.predict(crossval_dataset, steps=length))
+        
+        crossval_scores.append(np.mean(tf.keras.losses.CategoricalCrossentropy(predictions, targets_dataset)))
+        
+        break
+        
+    with open("crossval_accuracy.csv", "a") as file:
+        file.write(f"{np.mean(crossval_scores)}\n")
 
     # Obtenemos los ficheros a entrenar en este epoch
     train_df = training_progress_df[(training_progress_df['epochs_trained'] <= current_epoch) & 
@@ -472,14 +507,15 @@ while current_epoch < N_EPOCHS:
         print(f'Entrenando el fichero {midi[:-5]}...')
         
         # Leemos los datos y los preparamos
-        train_dataset = read_data(f'cache/train/{midi[:-5]}')
-        train_dataset = train_dataset.prefetch(tf.data.AUTOTUNE)
+        train_dataset = read_data(f'cache/{split}/{midi[:-5]}')
+        train_dataset = train_dataset.cache()
         train_dataset = train_dataset.map(parse_sample)
-        train_dataset = train_dataset.map((lambda i: ({"lc": tf.expand_dims(tf.expand_dims(i["lc"], 0), 0), 
-                                              "seq": tf.expand_dims(tf.one_hot(i["seq"], depth=N_LEVELS), 0)}, 
-                                             tf.expand_dims(tf.one_hot(i["out"], depth=N_LEVELS), 0))),
-                                  num_parallel_calls = tf.data.experimental.AUTOTUNE).cache()
+        train_dataset = train_dataset.map((lambda i: ({"lc": tf.expand_dims(i["lc"], 0), 
+                                              "seq":  tf.expand_dims(tf.one_hot(i["seq"], depth=N_LEVELS), 0)}, 
+                                             tf.one_hot(i["out"], depth=N_LEVELS))),
+                                  num_parallel_calls = tf.data.experimental.AUTOTUNE)
         train_dataset = train_dataset.batch(BATCH_SIZE)
+        train_dataset = train_dataset.prefetch(tf.data.AUTOTUNE)
         
         # Calculamos la longitud
         length = int(sum(1 for _ in train_dataset) / BATCH_SIZE)
@@ -490,8 +526,7 @@ while current_epoch < N_EPOCHS:
                                                              save_best_only=True, mode='max')
         
         # Entrenamos
-        history = model.fit(train_dataset, steps_per_epoch=length, epochs=1,
-                            callbacks=[train_acc_logger, best_checkpoint], metrics=['accuracy'])
+        history = model.fit(train_dataset, steps_per_epoch=length, epochs=1,                            callbacks=[train_acc_logger, best_checkpoint])
         
         # Guardamos el modelo
         model.save('model.hdf5')
@@ -500,33 +535,24 @@ while current_epoch < N_EPOCHS:
         training_progress_df.loc[df['midi_filename'] == midi, 'epochs_trained'] = current_epoch + 1
         #set_dataframe(training_progress_df, 'traning_progress.csv') # TODO: Quitar comment
         
-    # Obtenemos los valores de cross validation
-    crossval_df = training_progress_df[(training_progress_df['epochs_trained'] <= current_epoch) & 
-                                    (training_progress_df['split'] == 'validation') &
-                                    (training_progress_df['data_cached'] == True)]
-    
-    crossval_scores = []
-    
-    # Para cada fichero medimos la cross validation score al final del epoch
-    for idx, (split, midi) in enumerate(zip(train_df['split'], train_df['midi_filename'])):
-        
-        print('Calculando precisión para el conjunto de cross validation...')
-        
-        crossval_dataset = read_data(f'cache/train/{midi[:-5]}')
-        crossval_dataset = crossval_dataset.map(parse_sample)
-        crossval_dataset = crossval_dataset.map((lambda i: ({"lc": tf.expand_dims(tf.expand_dims(i["lc"], 0), 0), 
-                                              "seq": tf.expand_dims(tf.one_hot(i["seq"], depth=N_LEVELS), 0)}, 
-                                             tf.expand_dims(tf.one_hot(i["out"], depth=N_LEVELS), 0))),
-                                  num_parallel_calls = tf.data.experimental.AUTOTUNE)
-        
-        crossval_scores.append(cross_val_score(model, crossval_dataset, scoring="precision", cv=1).mean())
-        
-    with open("crossval_accuracy.csv", "a") as file:
-        file.write(f"{np.mean(crossval_scores)}\n")
+    # Aqui
     
     current_epoch += 1
     
     print('------------------------------------------------------------------------')
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+predictions = np.squeeze(model.predict(crossval_dataset, steps=length))
+np.mean(tf.keras.losses.CategoricalCrossentropy(predictions, targets_dataset))
 
 
 # ### Estadísticas del entrenamiento
