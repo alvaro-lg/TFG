@@ -172,10 +172,3 @@ class Midi_handler:
         midi = mido.MidiFile(self.dir_path + file, clip=True)
         pianoroll = self.mid2array(midi)
         return self.resample_pianoroll(pianoroll, self.get_sampling_rate(midi), self.sampling_rate)
-
-    def vectorize_midi_generator(self, file):
-        midi = mido.MidiFile(self.dir_path + file, clip=True)
-        pianoroll = self.mid2array(midi)
-
-        for item in self.resample_pianoroll(pianoroll, self.get_sampling_rate(midi), self.sampling_rate):
-            yield item

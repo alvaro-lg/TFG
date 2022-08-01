@@ -29,9 +29,3 @@ class Wav_handler:
     def vectorize_wav(self, file):
         data, sr = librosa.load(self.dir_path + file, sr=self.sampling_rate)
         return np.array(data)
-
-    def vectorize_wav_generator(self, file, window_size):
-        data, sr = librosa.load(self.dir_path + file, sr=self.sampling_rate)
-
-        for item in np.array(data):
-            yield item
