@@ -1,0 +1,7 @@
+*.midi
+**/*.midi
+*.wav
+**/*.wav
+*.png
+**/*.png
+!.gitignore
