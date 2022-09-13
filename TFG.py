@@ -7,17 +7,17 @@
 # **Autor:** Álvaro López García. <br>
 # **Tutor:** Cristina Tirnauca.
 
-# In[1]:
+# In[ ]:
 
 
 # Colab-only
-'''from google.colab import drive
+from google.colab import drive
 drive.mount('/content/drive')
-!pip install mido
-%cd drive/MyDrive/Colab\ Notebooks/TFG/'''
+get_ipython().system('pip install mido')
+get_ipython().run_line_magic('cd', 'drive/MyDrive/Colab\\ Notebooks/TFG/')
 
 
-# In[1]:
+# In[2]:
 
 
 # Celda para importar librerías, costantes, etc.
@@ -38,14 +38,14 @@ from tqdm import tqdm
 from IPython.display import display, HTML
 display(HTML("<style>.container { width:70% !important; }</style>"))
 
-# Para entrenarlo en mi equipor personal:
+# Para entrenarlo en mi equipor personal / colab:
 PATH = '/Volumes/TheVault/Documentos Mac/Documentos Universidad/4o Curso/2o Cuatrimestre/Trabajo de Fin de Grado/maestro-v3.0.0/'
-# PATH = '../maestro-v3.0.0/'
+#PATH = '../maestro-v3.0.0/'
 
 
 # ### Creación del dataframe
 
-# In[2]:
+# In[3]:
 
 
 def get_dataframe(path=PATH + 'maestro-v3.0.0.csv'):
@@ -55,7 +55,7 @@ def set_dataframe(df, path=PATH + 'maestro-v3.0.0.csv'):
     df.to_csv(path, index=False)
 
 
-# In[3]:
+# In[4]:
 
 
 df = get_dataframe('maestro-v3.0.0.csv')
@@ -66,7 +66,7 @@ df.head()
 
 # ### Parámetros del procesado
 
-# In[4]:
+# In[5]:
 
 
 #Parámetros de configuración de los archivos de audio
@@ -76,25 +76,25 @@ N_NOTES = 88
 
 # ###  Código para el procesado de los datos relativos a los ficheros MIDI (`*.midi -> tf.Dataset`)
 
-# In[5]:
+# In[6]:
 
 
 # Constantes relativas al estádar MIDI
 DEFAULT_SR = 500000
 
 
-# In[6]:
+# In[7]:
 
 
 from utils.midi_handler import Midi_handler
 midi_hdlr = Midi_handler(sampling_rate=SAMPLING_RATE, dir_path=PATH, n_notes=N_NOTES)
 
 
-# In[7]:
+# In[ ]:
 
 
-'''# Ploteamos una sección de un pianoroll de ejemplo
-midi_hdlr.plot_pianoroll(midi_hdlr.vectorize_midi(df['midi_filename'][0])[0:640000], title=df['midi_filename'][0])'''
+# Ploteamos una sección de un pianoroll de ejemplo
+midi_hdlr.plot_pianoroll(midi_hdlr.vectorize_midi(df['midi_filename'][0])[0:640000], title=df['midi_filename'][0])
 
 
 # Para los datos relativos a los ficheros `.midi` aplicaremos la normalización **MinMax** donde cada nuevo valor $x'$ para cada ejemplo $x$ vendrá dado por: $$ x' = \frac{x - min}{max - min} ,$$ donde $max$ y $min$ son los valores máximos y mínimos de los valores de entrada. En este caso, dada la definición del estándar MIDI, sabemos que los valores de estas velocidades ya están parametrizados entre $0$ y $127$ por lo que no necesitamos iterar sobre los datos para conocer el máximo y el mínimo. Para ello definiremos las siguientes constantes:
@@ -109,23 +109,23 @@ MIDI_MIN = 0
 
 # ### Código para el procesado de los datos relativos a los ficheros de audio (`*.wav -> tf.Dataset`)
 
-# In[10]:
+# In[9]:
 
 
 from utils.wav_handler import Wav_handler
 wav_hdlr = Wav_handler(sampling_rate=SAMPLING_RATE, dir_path=PATH)
 
 
-# In[11]:
+# In[ ]:
 
 
-'''# Ploteamos una sección de una onda
-wav_hdlr.plot_wav(wav_hdlr.vectorize_wav(df['audio_filename'][0])[0:128000], title=df['audio_filename'][0])'''
+# Ploteamos una sección de una onda
+wav_hdlr.plot_wav(wav_hdlr.vectorize_wav(df['audio_filename'][0])[0:128000], title=df['audio_filename'][0])
 
 
 # Para la compresión de la señal emplearemos una compresión basada en una $\mu$-law.
 
-# In[12]:
+# In[10]:
 
 
 # Constates relativas a la compresión con la mu-law
@@ -135,7 +135,7 @@ MU = 256
 AMPS = (-1, 1)
 
 
-# In[13]:
+# In[11]:
 
 
 from utils.mu_law_encoder import Mu_law_encoder
@@ -143,16 +143,16 @@ mulaw_enc = Mu_law_encoder(mu=MU, n_bits=N_BITS, amps=AMPS)
 
 
 # ## Creación del modelo
-# ![WaveNet_residblock.png](attachment:WaveNet_residblock.png)
+# <img src='resources/WaveNet_residblock.PNG'>
 
-# In[14]:
+# In[12]:
 
 
 def calculate_receptive_field(n_blocks, n_layers):
     return sum([2 ** i for i in range(n_layers)] * n_blocks) - n_blocks + 1
 
 
-# In[15]:
+# In[13]:
 
 
 # Parámetros que definen la arquitectura del modelo a crear por defecto en las llamadas a get_wavenet()
@@ -181,7 +181,7 @@ OUT_SHAPE = INP_SHAPE
 LC_SHAPE = (LC_LEN, N_LC_CHANNELS)
 
 
-# In[16]:
+# In[14]:
 
 
 '''
@@ -227,7 +227,7 @@ def get_wavenet(inp_shape=INP_SHAPE, out_shape=OUT_SHAPE, lc_shape=LC_SHAPE, n_f
                                         dilation_rate=dilation_rate)(seq)
         tmp = tf.keras.layers.Add()([seq_conv, lc])
         
-        # Gated activation
+        # Gated activation
         gated_act = tf.keras.layers.Multiply()([tf.keras.layers.Activation('tanh')(tmp),
                                         tf.keras.layers.Activation('sigmoid')(tmp)])
 
@@ -255,11 +255,11 @@ model.summary()
 
 # ### Obtenemos los datos y los transformamos los datos a los que acepta el modelo
 
-# In[17]:
+# In[15]:
 
 
 # Parámetros de entrenamiento
-N_EPOCHS = 50
+N_EPOCHS = 100
 BATCH_SIZE = 25
 
 # Parámetros para ajustar el tiempo de entrenamiento
@@ -270,7 +270,7 @@ LAST_ITEM = FIRST_ITEM + int(min(df['duration']) * SAMPLING_RATE * DIM_FACTOR)
 FILE_LENGTH = FIRST_ITEM + int(2 * min(df['duration']) * SAMPLING_RATE * DIM_FACTOR)
 
 
-# In[18]:
+# In[16]:
 
 
 feature_description = {
@@ -330,7 +330,7 @@ def read_data(filename=None):
     return  tf.data.experimental.load(filename, compression='GZIP')
 
 
-# In[19]:
+# In[ ]:
 
 
 import queue
@@ -405,7 +405,7 @@ print("Exiting Main Thread")
 
 # ### Loop de entrenamiento
 
-# In[31]:
+# In[27]:
 
 
 try:
@@ -424,14 +424,15 @@ wav_hdlr = Wav_handler(sampling_rate=SAMPLING_RATE, dir_path=PATH)
 mulaw_enc = Mu_law_encoder(mu=MU, n_bits=N_BITS, amps=AMPS)
 
 # Obtenemos el epoch actual
-current_epoch = min(df['epochs_trained'])
+current_epoch = min(df[(df['split'] == 'validation') | 
+                    (df['split'] == 'train')]['epochs_trained'])
 
 print(f'Comenzando el entrenamiento del modelo (nº de epochs: {N_EPOCHS}, parámetros a entrenar: {np.sum([np.prod(v.get_shape()) for v in model.trainable_weights])})...')
 print('------------------------------------------------------------------------')
 
 while current_epoch < N_EPOCHS:
 
-    # Obtenemos los ficheros a entrenar en este epoch
+    # Obtenemos los ficheros a entrenar en este epoch
     train_df = df[(df['epochs_trained'] <= current_epoch) & 
                                     (df['split'] == 'train')]
     
@@ -442,27 +443,18 @@ while current_epoch < N_EPOCHS:
         
         print(f'Entrenando el fichero {midi[:-5]}...')
 
-        # Datos del local conditioning
-        midi_data = midi_hdlr.vectorize_midi(train_df.loc[idx]['midi_filename'])[FIRST_ITEM:LAST_ITEM]
-        midi_dataset = tf.data.Dataset.from_tensor_slices(midi_data)
-
-        # Datos de la serie de tiempo
-        wav_data = mulaw_enc.encode_series(wav_hdlr.vectorize_wav(train_df.loc[idx]['audio_filename']))[FIRST_ITEM:LAST_ITEM+INPUT_LEN]
-        wav_dataset = tf.data.Dataset.from_tensor_slices(wav_data)
-        wav_dataset = wav_dataset.window(INPUT_LEN+1, shift=1, drop_remainder=True)
-        wav_dataset = wav_dataset.flat_map(lambda window: window.batch(INPUT_LEN+1))
-        wav_dataset = wav_dataset.map(lambda window: (tf.one_hot(window[:-1], depth=N_LEVELS), 
-                                                      tf.one_hot(window[1:], depth=N_LEVELS)))
-
-        dataset = tf.data.Dataset.zip((midi_dataset, wav_dataset))
-        dataset = dataset.map(lambda i, j: ({"lc":  tf.expand_dims(i, 0), 
-                                             "seq": j[0]}, j[1]), 
+        dataset = read_data('cache/' + train_df.loc[idx, 'split'] + '/' +
+                            train_df.loc[idx, 'midi_filename'][:-5])
+        dataset = dataset.map(lambda x: parse_sample(x))
+        dataset = dataset.map(lambda x: ({'lc': tf.expand_dims(x['lc'], 0),
+                                 'seq': tf.one_hot(x['seq'], depth=N_LEVELS)},
+                                 tf.one_hot(x['out'], depth=N_LEVELS)),
                               num_parallel_calls = tf.data.experimental.AUTOTUNE)
         dataset = dataset.batch(BATCH_SIZE)
         dataset = dataset.prefetch(tf.data.AUTOTUNE)
         
-        # Calculamos la longitud
-        length = int(min([len(midi_data), len(wav_data-INPUT_LEN)]) / BATCH_SIZE)
+        # Calculamos la longitud
+        length = int((LAST_ITEM - FIRST_ITEM) / BATCH_SIZE)
 
         # Callbacks
         train_acc_logger = tf.keras.callbacks.CSVLogger('training_accuracy.csv', separator=",", append=True)
@@ -472,22 +464,19 @@ while current_epoch < N_EPOCHS:
         # Entrenamos
         model.fit(dataset, steps_per_epoch=length, epochs=1,                            callbacks=[train_acc_logger, best_checkpoint],                            use_multiprocessing=True)
         
-        # Guardamos el modelo
+        # Guardamos el modelo
         model.save('model.hdf5')
         
-        # Actualizamos el csv con el progreso del entrenamiento
+        # Actualizamos el csv con el progreso del entrenamiento
         df.loc[df['midi_filename'] == midi, 'epochs_trained'] = current_epoch + 1
         set_dataframe(df, path='maestro-v3.0.0.csv')
 
         # Manual garbage collection
         del dataset
-        del midi_data
-        del midi_dataset
-        del wav_data
-        del wav_dataset
 
     # Obtenemos los valores de cross validation
-    crossval_df = df[df['split'] == 'validation']
+    crossval_df = df[(df['epochs_trained'] <= current_epoch) &
+                      (df['split'] == 'validation')]
 
     print('Calculando pérdida para el conjunto de cross validation...')
     
@@ -496,128 +485,181 @@ while current_epoch < N_EPOCHS:
         
         print(f'Calculando pérdida para el fichero {midi[:-5]}...')
         
-        # Datos del local conditioning
-        midi_data = midi_hdlr.vectorize_midi(crossval_df.loc[idx]['midi_filename'])[FIRST_ITEM:LAST_ITEM]
-        midi_dataset = tf.data.Dataset.from_tensor_slices(midi_data)
-
-        # Datos de la serie de tiempo
-        wav_data = mulaw_enc.encode_series(wav_hdlr.vectorize_wav(crossval_df.loc[idx]['audio_filename']))[FIRST_ITEM:LAST_ITEM+INPUT_LEN]
-        wav_dataset = tf.data.Dataset.from_tensor_slices(wav_data)
-        wav_dataset = wav_dataset.window(INPUT_LEN+1, shift=1, drop_remainder=True)
-        wav_dataset = wav_dataset.flat_map(lambda window: window.batch(INPUT_LEN+1))
-        wav_dataset = wav_dataset.map(lambda window: (tf.one_hot(window[:-1], depth=N_LEVELS), 
-                                                      tf.one_hot(window[1:], depth=N_LEVELS)))
-        
-        dataset = tf.data.Dataset.zip((midi_dataset, wav_dataset))
-        dataset = dataset.map(lambda i, j: ({"lc":  tf.expand_dims(i, 0), 
-                                             "seq": j[0]}, 
-                                            j[1]), 
+        dataset = read_data('cache/' + crossval_df.loc[idx, 'split'] + '/' +
+                         crossval_df.loc[idx, 'midi_filename'][:-5])
+        dataset = dataset.map(lambda x: parse_sample(x))
+        dataset = dataset.map(lambda x: ({'lc': tf.expand_dims(x['lc'], 0),
+                                 'seq': tf.one_hot(x['seq'], depth=N_LEVELS)},
+                                 tf.one_hot(x['out'], depth=N_LEVELS)),
                               num_parallel_calls = tf.data.experimental.AUTOTUNE)
         dataset = dataset.batch(BATCH_SIZE)
         dataset = dataset.prefetch(tf.data.AUTOTUNE)
         
-        # Calculamos la longitud
-        length = int(min([len(midi_data), len(wav_data-INPUT_LEN)]) / BATCH_SIZE)
+        # Calculamos la longitud
+        length = int((LAST_ITEM - FIRST_ITEM) / BATCH_SIZE)
         
-        # Callbacks
+        # Callback
+        # Lineas para que el callback funcione con model.evaluate()
         cv_acc_logger = tf.keras.callbacks.CSVLogger('crossval_accuracy.csv', separator=",", append=True)
-
-        # Calculamos la pedida
+        cv_acc_logger.on_test_begin = cv_acc_logger.on_train_begin
+        cv_acc_logger.on_test_batch_end = cv_acc_logger.on_epoch_end
+        cv_acc_logger.on_test_end = cv_acc_logger.on_train_end
+        
+        # Calculamos la pedida
         model.evaluate(dataset, steps=length, use_multiprocessing=True,                                    callbacks=[cv_acc_logger])
+        
+        # Actualizamos el csv con el progreso del entrenamiento
+        df.loc[df['midi_filename'] == midi, 'epochs_trained'] = current_epoch + 1
+        set_dataframe(df, path='maestro-v3.0.0.csv')
         
         # Manual garbage collection
         del dataset
-        del midi_data
-        del midi_dataset
-        del wav_data
-        del wav_dataset
     
     current_epoch += 1
     
-    print('------------------------------------------------------------------------')
-
-
-# In[ ]:
-
-
-idx = 64
-tmp_df = df.drop(df[df['duration'] > 900].index)
-len(tmp_df)
-#set_dataframe(tmp_df, 'maestro-v3.0.0.csv')
-#set_dataframe(df.drop(idx), 'maestro-v3.0.0.csv')
+print('------------------------------------------------------------------------')
 
 
 # ### Estadísticas del entrenamiento
 
-# In[ ]:
+# In[22]:
 
 
 '''
     Helper function to plot keras history.
-    https://machinelearningmastery.com/display-deep-learning-model-training-history-in-keras/
 '''
-def plot_history(history):
+def plot_history(history, file=False, mean=True):
+
+    if mean:
+        window_size = int(0.1 * N_EPOCHS)
+        cv_acc = history['val_accuracy']
+        cv_loss = history['val_loss']
+        cv_acc_mean = []
+        cv_loss_mean = []
+        cv_acc_window = [0] * window_size
+        cv_loss_window = [0] * window_size
+
+        for i in range(0, len(cv_acc)):
+            cv_acc_window.pop(0)
+            cv_loss_window.pop(0)
+            cv_acc_window.append(cv_acc[i])
+            cv_loss_window.append(cv_loss[i])
+            cv_acc_mean.append(np.mean(cv_acc_window))
+            cv_loss_mean.append(np.mean(cv_loss_window))
+        
     # Summarize history for accuracy
-    plt.plot(history.history['accuracy'])
-    plt.plot(history.history['val_accuracy'])
+    plt.figure(figsize=(4,2.75))
+    plt.grid(axis='both', which='major', color='#DDDDDD', linewidth=0.8)
+    plt.grid(axis='x', which='minor', color='#EEEEEE', linestyle=':', linewidth=0.5)
+    plt.plot(history['accuracy'])
+    plt.plot(history['val_accuracy'])
+    if mean: plt.plot(cv_acc_mean, '--', alpha=0.8, color='orange')
     plt.title('Model accuracy')
     plt.ylabel('Accuracy')
     plt.xlabel('Epoch')
-    plt.legend(['Train', 'Cross Validation'], loc='upper left')
-    plt.show()
+    plt.legend(['Train', 'Cross Validation', 'Cross Validation Mean'], loc='upper left')
+    plt.xlim(0, N_EPOCHS)
+    plt.ylim(0, 1)
+    # Outputing the plot to an image or showning it
+    if file:
+        plt.savefig('accuracy.png', bbox_inches='tight', dpi=600)
+    else:
+        plt.show()
     # Summarize history for loss
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
+    plt.figure(figsize=(4,2.75))
+    plt.grid(axis='both', which='major', color='#DDDDDD', linewidth=0.8)
+    plt.grid(axis='x', which='minor', color='#EEEEEE', linestyle=':', linewidth=0.5)
+    plt.plot(history['loss'])
+    plt.plot(history['val_loss'])
+    if mean: plt.plot(cv_loss_mean, '--', alpha=0.8, color='orange')
     plt.title('Model loss')
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
-    plt.legend(['Train', 'Cross Validation'], loc='upper left')
-    plt.show()
+    plt.legend(['Train', 'Cross Validation', 'Cross Validation Mean'], loc='upper left')
+    plt.xlim(0, N_EPOCHS)
+    plt.ylim(0, 3 * max([np.mean(history['loss']), np.mean(history['accuracy'])]))
+    # Outputing the plot to an image or showning it
+    if file:
+        plt.savefig('loss.png', bbox_inches='tight', dpi=250)
+    else:
+        plt.show()
 
 
-# In[ ]:
+# In[23]:
 
 
-for h in histories:
-    plot_history(h)
+history = dict()
+current_epoch = min(df[(df['split'] == 'validation') | 
+                    (df['split'] == 'train')]['epochs_trained'])
+
+
+# In[24]:
+
+
+# Training statistics processing
+training_data = pd.read_csv('training_accuracy.csv')
+training_acc = np.array(training_data['accuracy'])
+training_loss = np.array(training_data['loss'])
+
+train_step = int(len(training_data) / current_epoch)
+history['accuracy'] = np.array([np.mean(training_acc[i*train_step:(i+1)*train_step]) for i in range(0, current_epoch)])
+history['loss'] = np.array([np.mean(training_loss[i*train_step:(i+1)*train_step]) for i in range(0, current_epoch)])
+
+
+# In[25]:
+
+
+# Validation statistics processing
+validation_data = pd.read_csv('crossval_accuracy.csv')
+validation_acc = np.array(validation_data['accuracy'])
+validation_loss = np.array(validation_data['loss'])
+
+validation_step = int(len(validation_data) / current_epoch)
+history['val_accuracy'] = np.array([np.mean(validation_acc[i*train_step:(i+1)*train_step]) for i in range(0, current_epoch)])
+history['val_loss'] = np.array([np.mean(validation_loss[i*train_step:(i+1)*train_step]) for i in range(0, current_epoch)])
+
+
+# In[26]:
+
+
+plot_history(history, file=True)
 
 
 # ### Predicción
 
-# In[ ]:
+# In[27]:
 
 
 predictor = tf.keras.models.load_model('./best.hdf5')
 predictor.summary()
 
 
-# In[ ]:
+# In[29]:
 
 
 '''
-    Foo
+    Función para la generación de todas las predicciones consecutivas que generarían una interpretación.
 '''
 def predict_wav(in_file, out_file, dir_path, predictor, sr=SAMPLING_RATE, inp_shape=INP_SHAPE, enc=mulaw_enc):
+
+    pianoroll = (midi_hdlr.vectorize_midi(in_file) - MIDI_MIN) / (MIDI_MAX - MIDI_MIN)
     
-    # TO DO: Quitar comment
-    #pianoroll = vectorize_midis([dir_path + in_file], sampling_rate=sr, dir_path=dir_path)[0]
-    
-    # Listas empleadas para el input/output del preductor
-    in_arr = tf.random.uniform(inp_shape, minval=0, maxval=1, dtype=tf.dtypes.float32)
+    # Listas empleadas para el input/output del predictor
+    in_arr = tf.random.uniform((INP_SHAPE[0], 1), minval=0, maxval=N_LEVELS, dtype=tf.dtypes.int32)
+    in_arr = tf.keras.utils.to_categorical(in_arr, num_classes=N_LEVELS)
     lc_arr = []
     
     # Lista empleada para el output al fichero .wav
     wav_arr = tf.zeros([inp_shape[0]])
     
-    # TO DO: Quitar [:]
-    for i in tqdm(range(len(pianoroll[0:20000]))):
+    for i in tqdm(range(len(pianoroll))):
         
         # Getting the local conditioninng value for this step
         lc_arr = pianoroll[i]
         
         # Getting the value of the prediction
-        prediction = predictor.predict({"seq": tf.expand_dims(in_arr, 0),                                         "lc": tf.expand_dims(tf.expand_dims(lc_arr, 0), 0)})[-1]
-        prediction_idx = np.argmax(prediction[-1])
+        prediction = predictor.predict({"seq": tf.expand_dims(in_arr, 0),                                         "lc": tf.expand_dims(tf.expand_dims(lc_arr, 0), 0)})
+        prediction_idx = np.argmax(prediction[0][-1])
         
         # Figuring out the params for prediction in next step
         in_arr = tf.concat([in_arr[1:], tf.expand_dims(tf.keras.utils.to_categorical(prediction_idx, num_classes=N_LEVELS), 0)], 0)
@@ -626,102 +668,28 @@ def predict_wav(in_file, out_file, dir_path, predictor, sr=SAMPLING_RATE, inp_sh
         wav_arr = tf.concat([wav_arr, [enc.decode_sample(prediction_idx)]], 0)
         
     # Writting predicted series to file
-    sf.write(dir_path + out_file, wav_arr, sr, 'PCM_24')
+    sf.write(dir_path + '/' + out_file, wav_arr, sr, 'PCM_24')
     
     return wav_arr
 
 
-# In[ ]:
+# In[30]:
 
 
 midi_hdlr = Midi_handler(sampling_rate=SAMPLING_RATE, dir_path=PATH, n_notes=N_NOTES)
-in_file = train_df['midi_filename'][0]
+in_file = df['midi_filename'][0]
 out_file = 'prediction.wav'
-dir_path = './i\:o'
+dir_path = './i:o'
 
 
 # In[ ]:
 
 
-wav_arr = predict_wav(in_file, out_file, dir_path, model)
+wav_arr = predict_wav(in_file, out_file, dir_path, predictor)
 
 
 # In[ ]:
 
 
-pianoroll = (midi_hdlr.vectorize_midi(in_file) - MIDI_MIN) / (MIDI_MAX - MIDI_MIN)
-
-
-# In[ ]:
-
-
-print(pianoroll[0])
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-dataset = tf.data.Dataset.from_generator(lambda : generate_data(train_df.iloc[idx]),
-                                                output_signature=({'lc': tf.TensorSpec(shape=LC_SHAPE, dtype=tf.float64),
-                                                 'seq': tf.TensorSpec(shape=INP_SHAPE, dtype=tf.float32)},
-                                         tf.TensorSpec(shape=OUT_SHAPE, dtype=tf.float32)))
-'''
-dataset = dataset.map(lambda i, j : (i, j), num_parallel_calls = tf.data.experimental.AUTOTUNE)'''
-dataset = dataset.batch(BATCH_SIZE)
-
-
-# In[ ]:
-
-
-for i in dataset.take(1):
-    print(i)
-    break
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
+wav_arr[0:100]
 
