@@ -221,15 +221,13 @@ def main():
     plot3dGradientEv(X, y, theta_init, alpha, num_iter, file=FILE)
 
     # Plotting sigmoid function
-    plt.figure(figsize=(4,2.75), dpi=DPI)
+    plt.figure(figsize=(4,2.75), dpi=300)
     x = np.arange(-10, 10, 0.05)
     y = 1 / (1 + np.exp(-x))
     plt.plot(x, y)
-    plt.xlabel('$x$')
-    plt.ylabel('$\sigma(x)$')
-    plt.title('Función Sigmoide')
+    plt.title('$\sigma$')
     plt.xlim(-10, 10)
-    plt.ylim(min(y) -0.2, max(y) * 1.2)
+    plt.ylim(min(y) -0.1, max(y) * 1.1)
     plt.axhline(y=0.5, color='r', linestyle='--', linewidth=1)
     plt.text(-9, 0.525, '0.5', rotation=360, color='r')
     plt.axhline(y=0, color='grey', linestyle='--', linewidth=1)
@@ -237,7 +235,10 @@ def main():
     plt.axvline(x=0, color='grey', linestyle='--', linewidth=1)
     plt.grid(axis='both', which='major', color='#DDDDDD', linewidth=0.8)
     plt.grid(axis='x', which='minor', color='#EEEEEE', linestyle=':', linewidth=0.5)
-    plt.minorticks_on()
+    plt.minorticks_off()
+    plt.tight_layout()
+    plt.xlabel('$x$')
+    plt.ylabel('$y$')
 
     # Outputing the plot to an image or showning it
     if FILE:
